@@ -1,9 +1,9 @@
 use nannou::prelude::*;
 use palette::named;
 use tokio::sync::mpsc;
-use twitch_irc::TwitchIRCClient;
 use twitch_irc::login::StaticLoginCredentials;
 use twitch_irc::message::ServerMessage;
+use twitch_irc::TwitchIRCClient;
 use twitch_irc::{ClientConfig, SecureTCPTransport};
 
 fn main() {
@@ -17,22 +17,25 @@ enum PaintBrush {
     Ball,
     Line,
     FunLine,
-    FunBall
+    FunBall,
 }
 
 struct Model {
     // Store the window ID so we can refer to this specific window later if needed.
     _window: WindowId,
-    receiver: mpsc::Receiver<ServerMessage>, 
+    receiver: mpsc::Receiver<ServerMessage>,
     color: rgb::Srgb<u8>,
-    ball_size: f32,
+    paintbrush_size: f32,
     paint_brush: PaintBrush,
+    start: Point2,
+    end: Point2,
+    // line_b: Point
+    // line_a:
 }
-
 
 fn model(app: &App) -> Model {
     let (sender, receiver) = mpsc::channel::<ServerMessage>(32);
-    
+
     let _window = app
         .new_window()
         .size(512, 512)
@@ -45,8 +48,16 @@ fn model(app: &App) -> Model {
     tokio::spawn(async move {
         kick_off_twitch_chat(sender).await;
     });
-    
-    Model { _window, receiver, color: CORNFLOWERBLUE, ball_size: 0.1, paint_brush: PaintBrush::Ball }
+
+    Model {
+        _window,
+        receiver,
+        color: CORNFLOWERBLUE,
+        paintbrush_size: 0.1,
+        paint_brush: PaintBrush::Ball,
+        start: pt2(0.0, 0.0),
+        end: pt2(0.0, 0.0),
+    }
 }
 
 fn update(_app: &App, _model: &mut Model, _update: Update) {
@@ -55,13 +66,24 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
         if params.len() > 1 {
             let command = &params[1];
             match command.as_str() {
-                "bigball" => {
-                    _model.paint_brush = PaintBrush::Ball;
-                    _model.ball_size = _model.ball_size * 1.5;
+                // tl br
+                "tl" => {
+                    _model.start = _app.window_rect().top_left();
                 }
-                "smallball" => {
-                    _model.paint_brush = PaintBrush::Ball;
-                    _model.ball_size = _model.ball_size * 0.5;
+                "br" => {
+                    _model.start = _app.window_rect().bottom_right();
+                }
+                "tr" => {
+                    _model.start = _app.window_rect().top_right();
+                }
+                "bl" => {
+                    _model.start = _app.window_rect().top_right();
+                }
+                "big" => {
+                    _model.paintbrush_size = _model.paintbrush_size * 1.5;
+                }
+                "small" => {
+                    _model.paintbrush_size = _model.paintbrush_size * 0.5;
                 }
                 "line" => {
                     _model.paint_brush = PaintBrush::Line;
@@ -79,7 +101,7 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
                     _model.color = PLUM;
                 }
                 _ => {
-                    if let Some(color)  = named::from_str(command) {
+                    if let Some(color) = named::from_str(command) {
                         let new_color = rgb::Srgb::new(color.red, color.green, color.blue);
                         _model.color = new_color;
                     } else {
@@ -88,29 +110,27 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
                         // potentially with out the user nowing
                         let rgb_vals: Vec<u8> = command
                             .split_whitespace()
-                            .filter_map(|x| x.parse::<u8>().ok() )
+                            .filter_map(|x| x.parse::<u8>().ok())
                             .collect();
 
                         // If we filter out a value, we will have less than 3
                         // however you could supply a chat message: 2 255 dog 255
                         if rgb_vals.len() != 3 {
-                            return
+                            return;
                         }
-                        
+
                         let red = rgb_vals[0];
                         let green = rgb_vals[1];
                         let blue = rgb_vals[2];
                         let new_color = rgb::Srgb::new(red, green, blue);
                         _model.color = new_color;
-                            
+
                         // I don't need to do this
                         // println!("\nTwitch Message: {:?}", message.source().params[1]);
                     }
                 }
             }
-
         }
-    
     }
 }
 
@@ -122,11 +142,9 @@ fn event(_app: &App, _model: &mut Model, _event: WindowEvent) {
 
 // Draw the state of your `Model` into the given `Frame` here.
 fn view(_app: &App, _model: &Model, frame: Frame) {
-
-    // I would read in details 
+    // I would read in details
     let draw = _app.draw();
     // draw.background().color(_model.color);
-
 
     // Want this to turn off when I call another command
     let win = _app.window_rect();
@@ -136,42 +154,52 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
         PaintBrush::Ball => {
             draw.ellipse()
                 .x_y(_app.mouse.x, _app.mouse.y)
-                .radius(win.w() * _model.ball_size)
+                .radius(win.w() * _model.paintbrush_size)
                 .color(_model.color);
         }
         PaintBrush::FunBall => {
             draw.ellipse()
                 .x_y(_app.mouse.x, _app.mouse.y)
-                .radius(win.w() * _model.ball_size * t.sin())
+                .radius(win.w() * _model.paintbrush_size * t.sin())
                 .color(_model.color);
         }
         PaintBrush::Line => {
+            // top_left bottom_right
+            // tl br
+
+            // let x = _model.start;
+            // let y = _model.end;
+            let x = win.top_left() * _app.mouse.x;
+            let y = win.bottom_right() * _app.mouse.y;
+            // let x_point = _app.mouse.x;
+            // let y_point = _app.mouse.y;
+
             draw.line()
-                .weight(10.0)
+                .weight(_model.paintbrush_size)
                 .caps_round()
                 .color(_model.color)
                 .x_y(_app.mouse.x, _app.mouse.y)
-                .points(win.top_left() * _app.mouse.x, win.bottom_right() * _app.mouse.y);
+                .points(x, y);
+            // win.top_left
         }
-        PaintBrush::FunLine=> {
+        PaintBrush::FunLine => {
             draw.line()
                 .weight(10.0 + (t.sin() * 0.5 + 0.5) * 90.0)
                 .caps_round()
                 .color(_model.color)
                 .x_y(_app.mouse.x, _app.mouse.y)
                 .points(win.top_left() * _app.mouse.x, win.bottom_right() * t.cos());
-                // .points(win.top_left() * t.sin() * _app.mouse.x, win.bottom_right() * t.cos());
+            // .points(win.top_left() * t.sin() * _app.mouse.x, win.bottom_right() * t.cos());
         }
     }
 
-    
     // Draw a line!
-    
+
     // draw.ellipse().color(STEELBLUE);
     draw.to_frame(_app, &frame).unwrap();
 }
 
-    // receiver: mpsc::Receiver<String>, 
+// receiver: mpsc::Receiver<String>,
 async fn kick_off_twitch_chat(sender: mpsc::Sender<ServerMessage>) {
     tracing_subscriber::fmt::init();
 
