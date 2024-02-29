@@ -7,10 +7,7 @@ use twitch_irc::TwitchIRCClient;
 use twitch_irc::{ClientConfig, SecureTCPTransport};
 
 fn main() {
-     nannou::app(model)
-        .event(event)
-        .view(view)
-        .run();
+    nannou::app(model).event(event).view(view).run();
 }
 
 enum PaintBrush {
@@ -29,6 +26,8 @@ struct Model {
     paint_brush: PaintBrush,
     start: Point2,
     end: Point2,
+    width: f32,
+    saturation: f32,
     // line_b: Point
     // line_a:
 }
@@ -56,6 +55,8 @@ fn model(app: &App) -> Model {
         paint_brush: PaintBrush::Line,
         start: app.window_rect().top_left(),
         end: app.window_rect().bottom_right(),
+        width: 0.25,
+        saturation: 0.5,
     }
 }
 
@@ -83,6 +84,19 @@ fn event(_app: &App, _model: &mut Model, _event: Event) {
                 "bs" => {
                     _model.start = _app.window_rect().top_left() * _app.mouse.x;
                     _model.end = _app.window_rect().bottom_right() * _app.mouse.y;
+                }
+                "destaturate" | "desat" => {
+                    _model.saturation = _model.saturation * 0.5;
+                }
+                "saturate" | "sat" => {
+                    _model.saturation = _model.saturation * 2.0;
+                }
+                "skinny" => {
+                    // set max width
+                    _model.width = _model.width * 0.5;
+                }
+                "wide" => {
+                    _model.width = _model.width * 2.0;
                 }
                 "big" => {
                     _model.paintbrush_size = _model.paintbrush_size * 2.0;
@@ -184,11 +198,18 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
         }
     }
 
+    let rect_w = _model.width;
+
+    draw.rect()
+        .x_y(_app.mouse.y, _app.mouse.x)
+        .w(_app.mouse.x * rect_w)
+        .hsv(t, _model.saturation, 1.0);
+
     // I could supress this output
     // thats bad
     // but it might help
     // This to frame spits out soo many INFO messages
-    
+
     // Why is this spamming us!!!!
     draw.to_frame(_app, &frame).unwrap();
 }
