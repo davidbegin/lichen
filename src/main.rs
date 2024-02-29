@@ -7,10 +7,15 @@ use twitch_irc::TwitchIRCClient;
 use twitch_irc::{ClientConfig, SecureTCPTransport};
 
 fn main() {
-    nannou::app(model)
-        // .loop_mode(LoopMode::RefreshSync)
-        .update(update)
-        .run();
+    // nannou::app(model)
+    //     // .loop_mode(LoopMode::RefreshSync)
+    //     .update(update)
+    //     .run();
+
+     nannou::app(model)       // Start building the app and specify our `model`
+        .event(event)        // Specify that we want to handle app events with `event`
+        .view(view) // Request a simple window to which we'll draw with `view`
+        .run();              // Run it!
 }
 
 enum PaintBrush {
@@ -41,7 +46,6 @@ fn model(app: &App) -> Model {
         .size(512, 512)
         .title("nannou")
         .view(view) // The function that will be called for presenting graphics to a frame.
-        .event(event) // The function that will be called for presenting graphics to a frame.
         .build()
         .unwrap();
 
@@ -60,7 +64,10 @@ fn model(app: &App) -> Model {
     }
 }
 
-fn update(_app: &App, _model: &mut Model, _update: Update) {
+// This is for handling mouse movements and other window interactions
+// Handle events related to the window and update the model if necessary
+// fn event(_app: &App, _model: &mut Model, _event: WindowEvent) {
+fn event(_app: &App, _model: &mut Model, _event: Event) {
     if let Ok(message) = _model.receiver.try_recv() {
         let params = &message.source().params;
         if params.len() > 1 {
@@ -135,11 +142,6 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
             }
         }
     }
-}
-
-// This is for handling mouse movements and other window interactions
-// Handle events related to the window and update the model if necessary
-fn event(_app: &App, _model: &mut Model, _event: WindowEvent) {
 
     // Respond to mouse event
     // println!("\n{:?}", event);
@@ -224,3 +226,81 @@ async fn kick_off_twitch_chat(sender: mpsc::Sender<ServerMessage>) {
     // If you return instead of waiting the background task will exit.
     join_handle.await.unwrap();
 }
+
+// fn update(_app: &App, _model: &mut Model, _update: Update) {
+//     if let Ok(message) = _model.receiver.try_recv() {
+//         let params = &message.source().params;
+//         if params.len() > 1 {
+//             let command = &params[1];
+//             match command.as_str() {
+//                 "v" => {
+//                     _model.start = _app.window_rect().mid_top() * _app.mouse.x;
+//                     _model.end = _app.window_rect().mid_bottom() * _app.mouse.y;
+//                 }
+//                 "h" => {
+//                     _model.start = _app.window_rect().mid_left() * _app.mouse.x;
+//                     _model.end = _app.window_rect().mid_right() * _app.mouse.y;
+//                 }
+//                 "fs" => {
+//                     _model.start = _app.window_rect().top_right() * _app.mouse.x;
+//                     _model.end = _app.window_rect().bottom_left() * _app.mouse.y;
+//                 }
+//                 "bs" => {
+//                     _model.start = _app.window_rect().top_left() * _app.mouse.x;
+//                     _model.end = _app.window_rect().bottom_right() * _app.mouse.y;
+//                 }
+//                 "big" => {
+//                     _model.paintbrush_size = _model.paintbrush_size * 2.0;
+//                 }
+//                 "small" => {
+//                     _model.paintbrush_size = _model.paintbrush_size * 0.5;
+//                 }
+//                 "line" => {
+//                     _model.paint_brush = PaintBrush::Line;
+//                 }
+//                 "ball" => {
+//                     _model.paint_brush = PaintBrush::Ball;
+//                 }
+//                 "funline" => {
+//                     _model.paint_brush = PaintBrush::FunLine;
+//                 }
+//                 "funball" => {
+//                     _model.paint_brush = PaintBrush::FunBall;
+//                 }
+//                 "plum" => {
+//                     _model.color = PLUM;
+//                 }
+//                 _ => {
+//                     if let Some(color) = named::from_str(command) {
+//                         let new_color = rgb::Srgb::new(color.red, color.green, color.blue);
+//                         _model.color = new_color;
+//                     } else {
+//                         // // if one of the positions isn't parseable
+//                         // // we will return an error and the update will fail
+//                         // // potentially with out the user nowing
+//                         // let rgb_vals: Vec<u8> = command
+//                         //     .split_whitespace()
+//                         //     .filter_map(|x| x.parse::<u8>().ok())
+//                         //     .collect();
+//                         //
+//                         // // If we filter out a value, we will have less than 3
+//                         // // however you could supply a chat message: 2 255 dog 255
+//                         // if rgb_vals.len() != 3 {
+//                         //     return;
+//                         // }
+//                         //
+//                         // let red = rgb_vals[0];
+//                         // let green = rgb_vals[1];
+//                         // let blue = rgb_vals[2];
+//                         // let new_color = rgb::Srgb::new(red, green, blue);
+//                         // _model.color = new_color;
+//
+//                         // I don't need to do this
+//                         // println!("\nTwitch Message: {:?}", message.source().params[1]);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
