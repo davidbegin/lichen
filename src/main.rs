@@ -53,7 +53,7 @@ fn model(app: &App) -> Model {
         _window,
         receiver,
         color: CORNFLOWERBLUE,
-        paintbrush_size: 0.1,
+        paintbrush_size: 0.2,
         paint_brush: PaintBrush::Ball,
         start: pt2(0.0, 0.0),
         end: pt2(0.0, 0.0),
@@ -80,7 +80,7 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
                     _model.start = _app.window_rect().top_right();
                 }
                 "big" => {
-                    _model.paintbrush_size = _model.paintbrush_size * 1.5;
+                    _model.paintbrush_size = _model.paintbrush_size * 2.0;
                 }
                 "small" => {
                     _model.paintbrush_size = _model.paintbrush_size * 0.5;
