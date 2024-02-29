@@ -28,6 +28,7 @@ struct Model {
     end: Point2,
     width: f32,
     saturation: f32,
+    user: String,
     // line_b: Point
     // line_a:
 }
@@ -57,6 +58,7 @@ fn model(app: &App) -> Model {
         end: app.window_rect().bottom_right(),
         width: 0.25,
         saturation: 0.5,
+        user: "default".to_string(),
     }
 }
 
@@ -66,6 +68,11 @@ fn model(app: &App) -> Model {
 fn event(_app: &App, _model: &mut Model, _event: Event) {
     if let Ok(message) = _model.receiver.try_recv() {
         let params = &message.source().params;
+
+        let tags = message.source();
+        // ["display-name"];
+        // tags.get("display-name").unwrap();
+        
         if params.len() > 1 {
             let command = &params[1];
             match command.as_str() {
