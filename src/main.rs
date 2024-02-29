@@ -16,6 +16,8 @@ fn main() {
 enum PaintBrush {
     Ball,
     Line,
+    FunLine,
+    FunBall
 }
 
 struct Model {
@@ -63,6 +65,15 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
                 }
                 "line" => {
                     _model.paint_brush = PaintBrush::Line;
+                }
+                "ball" => {
+                    _model.paint_brush = PaintBrush::Ball;
+                }
+                "funline" => {
+                    _model.paint_brush = PaintBrush::FunLine;
+                }
+                "funball" => {
+                    _model.paint_brush = PaintBrush::FunBall;
                 }
                 "plum" => {
                     _model.color = PLUM;
@@ -124,11 +135,25 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
     match _model.paint_brush {
         PaintBrush::Ball => {
             draw.ellipse()
-                .x_y(_app.mouse.x * t.cos(), _app.mouse.y)
+                .x_y(_app.mouse.x, _app.mouse.y)
+                .radius(win.w() * _model.ball_size)
+                .color(_model.color);
+        }
+        PaintBrush::FunBall => {
+            draw.ellipse()
+                .x_y(_app.mouse.x, _app.mouse.y)
                 .radius(win.w() * _model.ball_size * t.sin())
                 .color(_model.color);
         }
         PaintBrush::Line => {
+            draw.line()
+                .weight(10.0)
+                .caps_round()
+                .color(_model.color)
+                .x_y(_app.mouse.x, _app.mouse.y)
+                .points(win.top_left() * _app.mouse.x, win.bottom_right() * _app.mouse.y);
+        }
+        PaintBrush::FunLine=> {
             draw.line()
                 .weight(10.0 + (t.sin() * 0.5 + 0.5) * 90.0)
                 .caps_round()
