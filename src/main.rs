@@ -8,7 +8,7 @@ use twitch_irc::{ClientConfig, SecureTCPTransport};
 
 fn main() {
     nannou::app(model)
-        .loop_mode(LoopMode::RefreshSync)
+        // .loop_mode(LoopMode::RefreshSync)
         .update(update)
         .run();
 }
@@ -53,10 +53,10 @@ fn model(app: &App) -> Model {
         _window,
         receiver,
         color: CORNFLOWERBLUE,
-        paintbrush_size: 0.2,
-        paint_brush: PaintBrush::Ball,
-        start: pt2(0.0, 0.0),
-        end: pt2(0.0, 0.0),
+        paintbrush_size: 0.3,
+        paint_brush: PaintBrush::Line,
+        start: app.window_rect().top_left(),
+        end: app.window_rect().bottom_right(),
     }
 }
 
@@ -66,18 +66,21 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
         if params.len() > 1 {
             let command = &params[1];
             match command.as_str() {
-                // tl br
-                "tl" => {
-                    _model.start = _app.window_rect().top_left();
+                "v" => {
+                    _model.start = _app.window_rect().mid_top() * _app.mouse.x;
+                    _model.end = _app.window_rect().mid_bottom() * _app.mouse.y;
                 }
-                "br" => {
-                    _model.start = _app.window_rect().bottom_right();
+                "h" => {
+                    _model.start = _app.window_rect().mid_left() * _app.mouse.x;
+                    _model.end = _app.window_rect().mid_right() * _app.mouse.y;
                 }
-                "tr" => {
-                    _model.start = _app.window_rect().top_right();
+                "fs" => {
+                    _model.start = _app.window_rect().top_right() * _app.mouse.x;
+                    _model.end = _app.window_rect().bottom_left() * _app.mouse.y;
                 }
-                "bl" => {
-                    _model.start = _app.window_rect().top_right();
+                "bs" => {
+                    _model.start = _app.window_rect().top_left() * _app.mouse.x;
+                    _model.end = _app.window_rect().bottom_right() * _app.mouse.y;
                 }
                 "big" => {
                     _model.paintbrush_size = _model.paintbrush_size * 2.0;
@@ -105,25 +108,25 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
                         let new_color = rgb::Srgb::new(color.red, color.green, color.blue);
                         _model.color = new_color;
                     } else {
-                        // if one of the positions isn't parseable
-                        // we will return an error and the update will fail
-                        // potentially with out the user nowing
-                        let rgb_vals: Vec<u8> = command
-                            .split_whitespace()
-                            .filter_map(|x| x.parse::<u8>().ok())
-                            .collect();
-
-                        // If we filter out a value, we will have less than 3
-                        // however you could supply a chat message: 2 255 dog 255
-                        if rgb_vals.len() != 3 {
-                            return;
-                        }
-
-                        let red = rgb_vals[0];
-                        let green = rgb_vals[1];
-                        let blue = rgb_vals[2];
-                        let new_color = rgb::Srgb::new(red, green, blue);
-                        _model.color = new_color;
+                        // // if one of the positions isn't parseable
+                        // // we will return an error and the update will fail
+                        // // potentially with out the user nowing
+                        // let rgb_vals: Vec<u8> = command
+                        //     .split_whitespace()
+                        //     .filter_map(|x| x.parse::<u8>().ok())
+                        //     .collect();
+                        //
+                        // // If we filter out a value, we will have less than 3
+                        // // however you could supply a chat message: 2 255 dog 255
+                        // if rgb_vals.len() != 3 {
+                        //     return;
+                        // }
+                        //
+                        // let red = rgb_vals[0];
+                        // let green = rgb_vals[1];
+                        // let blue = rgb_vals[2];
+                        // let new_color = rgb::Srgb::new(red, green, blue);
+                        // _model.color = new_color;
 
                         // I don't need to do this
                         // println!("\nTwitch Message: {:?}", message.source().params[1]);
@@ -137,6 +140,8 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {
 // This is for handling mouse movements and other window interactions
 // Handle events related to the window and update the model if necessary
 fn event(_app: &App, _model: &mut Model, _event: WindowEvent) {
+
+    // Respond to mouse event
     // println!("\n{:?}", event);
 }
 
@@ -154,7 +159,8 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
         PaintBrush::Ball => {
             draw.ellipse()
                 .x_y(_app.mouse.x, _app.mouse.y)
-                .radius(win.w() * _model.paintbrush_size)
+                .radius(_model.paintbrush_size)
+                // .radius(win.w() * _model.paintbrush_size)
                 .color(_model.color);
         }
         PaintBrush::FunBall => {
@@ -164,23 +170,12 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
                 .color(_model.color);
         }
         PaintBrush::Line => {
-            // top_left bottom_right
-            // tl br
-
-            // let x = _model.start;
-            // let y = _model.end;
-            let x = win.top_left() * _app.mouse.x;
-            let y = win.bottom_right() * _app.mouse.y;
-            // let x_point = _app.mouse.x;
-            // let y_point = _app.mouse.y;
-
             draw.line()
                 .weight(_model.paintbrush_size)
                 .caps_round()
                 .color(_model.color)
                 .x_y(_app.mouse.x, _app.mouse.y)
-                .points(x, y);
-            // win.top_left
+                .points(_model.start, _model.end);
         }
         PaintBrush::FunLine => {
             draw.line()
@@ -189,13 +184,15 @@ fn view(_app: &App, _model: &Model, frame: Frame) {
                 .color(_model.color)
                 .x_y(_app.mouse.x, _app.mouse.y)
                 .points(win.top_left() * _app.mouse.x, win.bottom_right() * t.cos());
-            // .points(win.top_left() * t.sin() * _app.mouse.x, win.bottom_right() * t.cos());
         }
     }
 
-    // Draw a line!
-
-    // draw.ellipse().color(STEELBLUE);
+    // I could supress this output
+    // thats bad
+    // but it might help
+    // This to frame spits out soo many INFO messages
+    
+    // Why is this spamming us!!!!
     draw.to_frame(_app, &frame).unwrap();
 }
 
